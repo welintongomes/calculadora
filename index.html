@@ -75,7 +75,7 @@
 
         .tab-content {
             display: none;
-            padding: 30px;
+            padding: 11px;
             min-height: 400px;
         }
 
@@ -140,7 +140,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 30px;
-            margin-bottom: 30px;
+            /*margin-bottom: 30px;*/
         }
 
         .input-group {
@@ -295,10 +295,15 @@
 
         @media (max-width: 768px) {
             .time-calculator {
+                overflow-y: scroll;
+                max-height: 272px;
                 grid-template-columns: 1fr;
             }
 
             .converter-grid {
+                /* min-height: 399px; */
+                overflow-y: scroll;
+                max-height: 358px;
                 grid-template-columns: 1fr;
             }
 
@@ -313,6 +318,13 @@
 
             .timer-display {
                 font-size: 2rem;
+                text-align: center;
+                font-family: 'Courier New', monospace;
+                background: #000;
+                color: #00ff00;
+                padding: 10px;
+                border-radius: 15px;
+                margin: 20px 0;
             }
         }
     </style>
@@ -321,7 +333,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🧮 Calculadora Completa</h1>
+            <h1>🧮 Calculadora</h1>
             <div class="current-time" id="currentTime"></div>
         </div>
 
@@ -359,6 +371,20 @@
 
         <div id="time" class="tab-content">
             <div class="time-calculator">
+                <div>
+                    <h3>📅 Cálculo de Idade ou Ano</h3>
+                    <div class="input-group">
+                        <label>Informe a idade:</label>
+                        <input type="number" id="idade" placeholder="Ex: 38">
+                    </div>
+                    <div class="input-group">
+                        <label>Ou informe o ano de nascimento:</label>
+                        <input type="number" id="anoNascimento" placeholder="Ex: 1987">
+                    </div>
+                    <button class="btn" onclick="calcularAnoOuIdade()">Calcular</button>
+                    <div id="resultadoAnoIdade"></div>
+                </div>
+
                 <div>
                     <h3>➕ Adicionar Tempo</h3>
                     <div class="input-group">
@@ -630,6 +656,26 @@
                 currentInput = '0';
             }
             updateDisplay();
+        }
+        function calcularAnoOuIdade() {
+            const idade = parseInt(document.getElementById('idade').value);
+            const anoNascimento = parseInt(document.getElementById('anoNascimento').value);
+            const anoAtual = new Date().getFullYear();
+
+            const resultado = document.getElementById('timeResult');
+            resultado.innerHTML = "<h4>Resultado:</h4>";
+
+            if (!isNaN(idade) && isNaN(anoNascimento)) {
+                const anoCalculado = anoAtual - idade;
+                resultado.innerHTML += `<p><strong>Com ${idade} anos, a pessoa nasceu em:</strong> ${anoCalculado}</p>`;
+            } else if (!isNaN(anoNascimento) && isNaN(idade)) {
+                const idadeCalculada = anoAtual - anoNascimento;
+                resultado.innerHTML += `<p><strong>Quem nasceu em ${anoNascimento} tem:</strong> ${idadeCalculada} anos</p>`;
+            } else if (!isNaN(idade) && !isNaN(anoNascimento)) {
+                resultado.innerHTML += `<p>Informe <strong>apenas idade</strong> ou <strong>ano de nascimento</strong>, não os dois.</p>`;
+            } else {
+                resultado.innerHTML += `<p>Preencha um dos campos para calcular.</p>`;
+            }
         }
 
         // Cálculos de tempo
@@ -986,13 +1032,10 @@
         }
 
         function playAlarmSound() {
-            // Evitar múltiplos sons simultâneos
             if (isPlayingAlarm) return;
-
             isPlayingAlarm = true;
 
             try {
-                // Criar som de alarme usando Web Audio API de forma otimizada
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
@@ -1000,38 +1043,42 @@
                 oscillator.connect(gainNode);
                 gainNode.connect(audioContext.destination);
 
-                // Som mais suave
-                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-                oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.3);
-                oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.6);
+                // Frequência alternando para chamar mais atenção
+                oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);           // Agudo inicial
+                oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.5);      // Baixo
+                oscillator.frequency.setValueAtTime(1200, audioContext.currentTime + 1.0);     // Mais agudo
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 1.5);      // Médio
+                oscillator.frequency.setValueAtTime(1400, audioContext.currentTime + 2.0);     // Alto
+                oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 3.0);     // Fim
 
+                // Volume progressivo (0.1 → 1.0 em 2 segundos)
                 gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+                gainNode.gain.linearRampToValueAtTime(1.0, audioContext.currentTime + 2.0);
 
                 oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 1);
+                oscillator.stop(audioContext.currentTime + 4); // Duração de 4 segundos
 
-                // Limpar recursos após o som
                 oscillator.onended = () => {
                     audioContext.close();
                     isPlayingAlarm = false;
                 };
 
-                // Fallback para liberar o flag
+                // Fallback de segurança
                 setTimeout(() => {
                     isPlayingAlarm = false;
-                }, 2000);
+                }, 5000);
 
             } catch (error) {
-                console.log('Erro ao tocar som:', error);
+                console.error('Erro ao tocar som:', error);
                 isPlayingAlarm = false;
 
-                // Fallback: vibrar no celular se disponível
+                // Fallback para vibração em dispositivos móveis
                 if (navigator.vibrate) {
-                    navigator.vibrate([200, 100, 200]);
+                    navigator.vibrate([300, 200, 300, 200, 500]);
                 }
             }
         }
+
 
         // Inicialização - OTIMIZADA
         document.addEventListener('DOMContentLoaded', function () {
